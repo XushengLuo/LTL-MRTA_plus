@@ -127,14 +127,14 @@ def construct_edge_set_helper(element, component, element_component2label, eleme
                     pass
 
 
-def construct_graph(num_nodes, node_location_type_component_element, edge_set, p2p):
+def construct_graph(num_nodes, node_location_type_component_element, edge_set, p2p, factor):
 
     ts = nx.DiGraph()
     for node in list(range(num_nodes)):
         ts.add_node(node, location_type_component_element=node_location_type_component_element[node])
     for edge in edge_set:
-        ts.add_edge(edge[0], edge[1], weight=p2p[(ts.nodes[edge[0]]['location_type_component_element'][0],
-                                                  ts.nodes[edge[1]]['location_type_component_element'][0])])
+        ts.add_edge(edge[0], edge[1], weight=1/factor*p2p[(ts.nodes[edge[0]]['location_type_component_element'][0],
+                                                           ts.nodes[edge[1]]['location_type_component_element'][0])])
     return ts
 
 

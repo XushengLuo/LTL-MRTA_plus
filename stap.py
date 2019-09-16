@@ -9,6 +9,10 @@ import milp
 import milp_suffix
 import pickle
 from vis import vis
+import numpy
+
+
+factor = 1
 
 start = datetime.now()
 
@@ -18,10 +22,10 @@ workspace = Workspace()
 # plt.show()
 
 # with open('data/workspace', 'wb') as filehandle:
-#     pickle.dump(workspace, filehandle)
+#     pickle.dump(workspace.p2p, filehandle)
 
 # with open('data/workspace', 'rb') as filehandle:
-#     workspace = pickle.load(filehandle)
+#     workspace.p2p = pickle.load(filehandle)
 # workspace.plot_workspace()
 # plt.show()
 
@@ -39,7 +43,7 @@ init_state, accept_state, is_nonempty_self_loop = buchi.get_init_accept()
 
 pruned_subgraph, paths = buchi.get_subgraph(init_state, accept_state, is_nonempty_self_loop)
 
-# print('partial time: {0}'.format((datetime.now() - start).total_seconds()))
+# print('partial time to pruned_graph: {0}'.format((datetime.now() - start).total_seconds()))
 
 edge2element, element2edge = buchi.get_element(pruned_subgraph)
 
@@ -50,6 +54,8 @@ poset_relation, pos, hasse_diagram = buchi.map_path_to_element_sequence(edge2ele
 robot2eccl = poset.element2robot2eccl(pos, element2edge, pruned_subgraph)
 
 poset.strict_larger(element2edge, pruned_subgraph, poset_relation)
+
+# print('partial time to poset: {0}'.format((datetime.now() - start).total_seconds()))
 
 # for order in poset_relation:
 #     print(pruned_subgraph.edges[element2edge[order[0]]]['formula'], ' -> ',
@@ -64,17 +70,24 @@ edge_set = weighted_ts.construct_edge_set(pos, element_component_clause_literal_
                                           element2edge, pruned_subgraph, element_component2label, init_type_robot_node,
                                           incomparable_element, larger_element)
 
-ts = weighted_ts.construct_graph(num_nodes, node_location_type_component_element, edge_set, workspace.p2p)
+ts = weighted_ts.construct_graph(num_nodes, node_location_type_component_element, edge_set, workspace.p2p, factor)
 
-# milp.construct_milp_constraint(ts, workspace.type_num, pos, pruned_subgraph,
-#                                                                     element2edge, element_component_clause_literal_node,
-#                                                                     poset_relation, init_type_robot_node,
-#                                                                     incomparable_element, larger_element, robot2eccl)
+
+# with open('data/workspace', 'wb') as filehandle:
+#     pickle.dump(ts, filehandle)
+print(numpy.mean([ts.edges[e]['weight'] for e in ts.edges]))
+
+# with open('data/workspace', 'rb') as filehandle:
+#     ts_10 = pickle.load(filehandle)
+
+# print('partial time before milp: {0}'.format((datetime.now() - start).total_seconds()))
 
 robot_waypoint_pre, robot_time_pre, robot2robots = milp.construct_milp_constraint(ts, workspace.type_num, pos, pruned_subgraph,
                                                                     element2edge, element_component_clause_literal_node,
                                                                     poset_relation, init_type_robot_node,
-                                                                    incomparable_element, larger_element, robot2eccl)
+                                                                    incomparable_element, larger_element, robot2eccl, factor)
+# print('total time: {0}'.format((datetime.now() - start).total_seconds()))
+#
 robot_path_pre = milp.get_path(robot_waypoint_pre, robot_time_pre, workspace)
 
 if is_nonempty_self_loop:
@@ -89,8 +102,8 @@ if is_nonempty_self_loop:
     robot_pre_suf_time = dict()
     for robot in robot_time_pre.keys():
         robot_pre_suf_time[robot] = [robot_time_pre[robot][-1]] * 2
-
-    vis(workspace, robot_path_pre, robot_pre_suf_time, task.ap)
+    #
+    # vis(workspace, robot_path_pre, robot_pre_suf_time, task.ap)
     for type_robot, waypoint in robot_waypoint_pre.items():
         print(type_robot, " : ", waypoint)
         print(type_robot, " : ", robot_time_pre[type_robot])
@@ -128,7 +141,7 @@ if not is_nonempty_self_loop:
         except KeyError:
             workspace.type_robot_location[type_robot] = workspace.label_location[workspace.type_robot_label[type_robot]]
 
-        terminator[type_robot] = robot_time_pre[type_robot][-1]
+        terminator[type_robot] = robot_time_pre[type_robot][-1] / factor
 
     init_type_robot_node, element_component_clause_literal_node, node_location_type_component_element, num_nodes = \
         weighted_ts.construct_node_set(pos, element2edge, pruned_subgraph, workspace.type_robot_label)
@@ -138,14 +151,15 @@ if not is_nonempty_self_loop:
                                               init_type_robot_node, incomparable_element, larger_element)
 
     ts = weighted_ts.construct_graph(num_nodes, node_location_type_component_element, edge_set,
-                                     workspace.p2p)
+                                     workspace.p2p, factor)
 
     robot_waypoint_suf, robot_waypoint_plus_suf, robot_time_suf = milp_suffix.construct_milp_constraint(ts, workspace.type_num, pos,
                                                                                pruned_subgraph, element2edge,
                                                                                element_component_clause_literal_node,
                                                                                poset_relation, init_type_robot_node,
                                                                                incomparable_element, larger_element,
-                                                                               terminator, robot2eccl, robot2robots, workspace)
+                                                                               terminator, robot2eccl, robot2robots,
+                                                                                                        workspace, factor)
     robot_path_suf = milp_suffix.get_path(robot_waypoint_suf, robot_time_suf, workspace)
     end = datetime.now()
     print('total time: {0}'.format((end - start).total_seconds()))

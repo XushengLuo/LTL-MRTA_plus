@@ -4,20 +4,20 @@ import math
 
 def construct_milp_constraint(ts, type_num, poset, pruned_subgraph, element2edge, element_component_clause_literal_node,
                               strict_poset_relation, init_type_robot_node, incomparable_element, larger_element,
-                              robot2eccl):
+                              robot2eccl, factor):
 
     M = 1e5
-    epsilon = 1  # edge and previous edge
+    epsilon = 1/factor  # edge and previous edge
     m = Model()
     # create variables
     x_vars, t_vars, c_vars, t_edge_vars, b_element_vars = create_variables(m, ts, poset, pruned_subgraph, element2edge,
-                                                                           type_num)
+                                                                           type_num, factor)
     # create initial constraints
     initial_constraints(m, x_vars, t_vars, ts, init_type_robot_node, type_num)
 
     # network and schedule constraints
     network_schedule_constraints(m, ts, x_vars, t_vars, init_type_robot_node, incomparable_element, larger_element,
-                                 type_num, M, epsilon)
+                                 type_num, M, epsilon, factor)
 
     # edge time constraints -- eq (16)
     for element in poset:
@@ -85,8 +85,11 @@ def construct_milp_constraint(ts, type_num, poset, pruned_subgraph, element2edge
     expr.add(LinExpr([0.3]*len([key for key in t_vars.keys() if key[2] == 1]),
                      [value for key, value in t_vars.items() if key[2] == 1]))
     m.setObjective(expr, GRB.MINIMIZE)
-    m.Params.OutputFlag = 0
+    # m.Params.OutputFlag = 0
     m.update()
+    print('# of variables: {0}'.format(m.NumVars))
+    print('# of constraints: {0}'.format(m.NumConstrs))
+
     m.optimize()
 
     if m.status == GRB.Status.OPTIMAL:
@@ -104,20 +107,18 @@ def construct_milp_constraint(ts, type_num, poset, pruned_subgraph, element2edge
         print('Optimization ended with status %d' % m.status)
         exit(0)
 
-    print('# of variables: {0}'.format(m.NumVars))
-    print('# of constraints: {0}'.format(m.NumConstrs))
     goal = 0
     for index in x_vars.keys():
         goal += ts.edges[tuple(index[:2])]['weight'] * x_vars[index].x
-    print('obj:%g' % goal)
+    # print('obj:%g' % goal)
 
     robot2robots = dict()
     get_same_robot(robot2robots, robot2eccl, x_vars, element_component_clause_literal_node, type_num, ts)
-    robot_waypoint_pre, robot_time_pre = get_waypoint(x_vars, t_vars, ts, init_type_robot_node)
+    robot_waypoint_pre, robot_time_pre = get_waypoint(x_vars, t_vars, ts, init_type_robot_node, factor)
     return robot_waypoint_pre, robot_time_pre, robot2robots
 
 
-def create_variables(m, ts, poset, pruned_subgraph, element2edge, type_num):
+def create_variables(m, ts, poset, pruned_subgraph, element2edge, type_num, factor):
     # clause variable, (element, 0|1, clause_index)
     c_vars = {}
     for element in poset:
@@ -132,15 +133,16 @@ def create_variables(m, ts, poset, pruned_subgraph, element2edge, type_num):
 
     # time variable (node, robot_index, -|+)
     t_vars = {}
+    v_type = GRB.INTEGER if factor == 1 else GRB.CONTINUOUS
     for node in ts.nodes():
         # vars for self loop
         if ts.nodes[node]['location_type_component_element'][2] == 0:
             t_vars.update(m.addVars([node], list(range(type_num[ts.nodes[node]['location_type_component_element'][1]])), [0, 1],
-                                    vtype=GRB.INTEGER))
+                                    vtype=v_type))
         # vars for edge
         else:
             t_vars.update(m.addVars([node], list(range(type_num[ts.nodes[node]['location_type_component_element'][1]])), [1],
-                                    vtype=GRB.INTEGER))
+                                    vtype=v_type))
     m.update()
     # routing variable (node_i, node_j, robot_index)
     x_vars = {}
@@ -154,7 +156,7 @@ def create_variables(m, ts, poset, pruned_subgraph, element2edge, type_num):
     for element in poset:
         edge_label = pruned_subgraph.edges[element2edge[element]]['label']
         if edge_label != '1':
-            t_edge_vars.update(m.addVars([element], vtype=GRB.INTEGER))
+            t_edge_vars.update(m.addVars([element], vtype=v_type))
     # binary relation between edge time (element, element)
     b_element_vars = {}
     for element in poset:
@@ -193,7 +195,7 @@ def literal_clause(m, x_vars, c_vars, element, component, label, ts, type_num, c
 
 
 def network_schedule_constraints(m, ts, x_vars, t_vars, init_type_robot_node, incomparable_element, larger_element,
-                                 type_num, M, epsilon):
+                                 type_num, M, epsilon, factor):
     # focus on nodes
     for i in ts.nodes():
         if i not in init_type_robot_node.values() and list(ts.predecessors(i)):  # the predecessor of i
@@ -344,7 +346,7 @@ def self_loop_constraints(m, ts, x_vars, t_vars, c_vars, t_edge_vars, b_element_
     m.update()
 
 
-def get_waypoint(x_vars, t_vars, ts, init_type_robot_node):
+def get_waypoint(x_vars, t_vars, ts, init_type_robot_node, factor):
     robot_waypoint = dict()
     robot_time = dict()
     for type_robot, node in init_type_robot_node.items():
@@ -356,11 +358,12 @@ def get_waypoint(x_vars, t_vars, ts, init_type_robot_node):
             for s in ts.succ[pre]:
                 if round(x_vars[(pre, s, type_robot[1])].x) == 1:
                     try:
-                        time.append(round(t_vars[(s, type_robot[1], 0)].x))
+                        time.append(round(t_vars[(s, type_robot[1], 0)].x * factor))
                         path.append(s)
                     except KeyError:
                         pass
-                    time.append(round(t_vars[(s, type_robot[1], 1)].x))
+                    # print(t_vars[(s, type_robot[1], 1)].x)
+                    time.append(round(t_vars[(s, type_robot[1], 1)].x * factor))
                     path.append(s)
                     break
             if path[-1] == pre:

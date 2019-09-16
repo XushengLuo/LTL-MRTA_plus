@@ -1,11 +1,15 @@
 #!/bin/bash
 
-for l in 12
+for w in 50
 do
-    echo "---------------------------l=${l}-------------------------"
-    for ((n=1;n<=5;n++))
+    echo "---------------------------w=${w}-------------------------"
+    for n in  12
     do
-        /usr/local/Cellar/python/3.6.3/Frameworks/Python.framework/Versions/3.6/bin/python3.6 /Users/chrislaw/Github/MRTA_LTL_same_robot/stap.py
+        echo "--------------------n=${n}-----------------------"
+        for ((i=1;i<=5;i++))
+        do
+            /usr/local/Cellar/python/3.6.3/Frameworks/Python.framework/Versions/3.6/bin/python3.6 /Users/chrislaw/Github/LTL_MRTA_plus/stap.py ${w} ${n}
+        done
     done
     # for ((n=3;n<4;n++))
 done

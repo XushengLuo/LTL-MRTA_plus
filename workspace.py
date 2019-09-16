@@ -16,11 +16,14 @@ class Workspace(object):
     """
     def __init__(self):
         # dimension of the workspace
-        self.length = 10  # int(sys.argv[1])
-        self.width = 10 # int(sys.argv[1])
-        self.workspace = (self.length, self.width)
-        n = 5  # int(sys.argv[1])
+        # self.length = int(sys.argv[1])
+        # self.width = int(sys.argv[1])
+        # n = int(sys.argv[2])
+        self.length = 50
+        self.width = 50
+        n = 12
         self.type_num = {1: n, 2: n, 3: n, 4: n, 5: n}   # single-task robot
+        self.workspace = (self.length, self.width)
         self.num_of_regions = 10
         self.num_of_obstacles = 10
         self.occupied = []
