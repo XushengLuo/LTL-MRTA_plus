@@ -19,9 +19,9 @@ class Workspace(object):
         # self.length = int(sys.argv[1])
         # self.width = int(sys.argv[1])
         # n = int(sys.argv[2])
-        self.length = 50
-        self.width = 50
-        n = 12
+        self.length = 10
+        self.width = 10
+        n = 5
         self.type_num = {1: n, 2: n, 3: n, 4: n, 5: n}   # single-task robot
         self.workspace = (self.length, self.width)
         self.num_of_regions = 10

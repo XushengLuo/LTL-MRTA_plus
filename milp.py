@@ -86,6 +86,7 @@ def construct_milp_constraint(ts, type_num, poset, pruned_subgraph, element2edge
                      [value for key, value in t_vars.items() if key[2] == 1]))
     m.setObjective(expr, GRB.MINIMIZE)
     # m.Params.OutputFlag = 0
+    m.Params.MIPGap = 0.05
     m.update()
     print('# of variables: {0}'.format(m.NumVars))
     print('# of constraints: {0}'.format(m.NumConstrs))
@@ -231,11 +232,13 @@ def network_schedule_constraints(m, ts, x_vars, t_vars, init_type_robot_node, in
                     # precedent elements, include initial element -1
                     elif p_element in larger_element[i_element] + [-1]:
                         if ts.nodes[i]['location_type_component_element'][2] == 0:
-                            m.addConstr(t_vars[(p, k, 1)] + ts.edges[(p, i)]['weight'] * x_vars[(p, i, k)] <=
-                                        t_vars[(i, k, 0)] + M * (1 - x_vars[(p, i, k)]))
+                            m.addConstr(
+                                t_vars[(p, k, 1)] + ts.edges[(p, i)]['weight'] * x_vars[(p, i, k)] <=
+                                t_vars[(i, k, 0)] + M * (1 - x_vars[(p, i, k)]))
                         else:
-                            m.addConstr(t_vars[(p, k, 1)] + ts.edges[(p, i)]['weight'] * x_vars[(p, i, k)] <=
-                                        t_vars[(i, k, 1)] + M * (1 - x_vars[(p, i, k)]))
+                            m.addConstr(
+                                t_vars[(p, k, 1)] + ts.edges[(p, i)]['weight'] * x_vars[(p, i, k)] <=
+                                t_vars[(i, k, 1)] + M * (1 - x_vars[(p, i, k)]))
 
     m.update()
 

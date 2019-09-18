@@ -157,6 +157,6 @@ def vis(workspace, robot_path, robot_pre_suf_time, ap):
     ani = anim.FuncAnimation(fig, animate, fargs=[ax, particles, annots, cls_robot_path, time_template, time_text,
                                                   ap_template, ap_text],
                              frames=int(np.ceil(max_frame)), interval=30, blit=True)
-    ani.save('/Users/chrislaw/Box Sync/Research/STAP/video/phi3.mp4', fps=1/cls_robot_path.dt, dpi=400)
+    ani.save('/Users/chrislaw/Box Sync/Research/LTL_MRTA_icra2020/video/phi3.mp4', fps=1/cls_robot_path.dt, dpi=400)
 
     # plt.show()

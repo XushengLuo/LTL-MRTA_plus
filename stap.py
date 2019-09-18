@@ -102,7 +102,7 @@ if is_nonempty_self_loop:
     robot_pre_suf_time = dict()
     for robot in robot_time_pre.keys():
         robot_pre_suf_time[robot] = [robot_time_pre[robot][-1]] * 2
-    #
+
     # vis(workspace, robot_path_pre, robot_pre_suf_time, task.ap)
     for type_robot, waypoint in robot_waypoint_pre.items():
         print(type_robot, " : ", waypoint)
@@ -185,7 +185,7 @@ if not is_nonempty_self_loop:
         print(type_robot, " : ", robot_time_pre[type_robot])
         print(type_robot, " : ", robot_path_pre[type_robot])
         print(type_robot, " : ", list(range(round(robot_time_pre[type_robot][-1])+1)))
-    #
+
     for type_robot, waypoint in robot_waypoint_plus_suf.items():
         print(type_robot, " : ", waypoint)
         print(type_robot, " : ", robot_time_suf[type_robot])

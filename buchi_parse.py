@@ -235,7 +235,7 @@ class Buchi(object):
         else:
             for s in subgraph.succ[head]:
                 paths = paths + [[head] + p for p in list(nx.all_simple_paths(subgraph, source=s, target=tail))]
-        # if self loop around the accepting state, then create an element with edge label 1,
+        # if self loop around the accepting state, then create an element with edge label ,
         # solving prefix and suffix together
         if is_nonempty_self_loop and subgraph.nodes[tail]['label'] != 'skip':
             subgraph.add_edge(tail, tail, label=subgraph.nodes[tail]['label'], formula=subgraph.nodes[tail]['formula'])
@@ -268,27 +268,23 @@ class Buchi(object):
 
             # partition into two groups
             dependent = []
-            independent = []
-            while len(self_loop_label) > 0:
+            independent = [self_loop_label[0]]
+            del self_loop_label[0]
+            for edge in self_loop_label:
                 # pick the first element
                 is_independent = True
-                curr = self_loop_label[0]
-                del self_loop_label[0]
-                k = 0
-                while k < len(self_loop_label):
-                    if nx.has_path(pruned_subgraph, curr[1], self_loop_label[k][0]):
+                for ind in independent:
+                    if nx.has_path(pruned_subgraph, ind[1], edge[0]) or \
+                            nx.has_path(pruned_subgraph, edge[1], ind[0]):
                         # if there is a path between the first element and current element
                         is_independent = False
-                        dependent.append(self_loop_label[k])
-                        del self_loop_label[k]
-                        continue
-                    else:
-                        k += 1
+                        break
                 # address the first element
                 if is_independent:
-                    independent.append(curr)
+                    independent.append(edge)
                 else:
-                    dependent.append(curr)
+                    dependent.append(edge)
+
             # map edge/element to element/edge
             if independent:
                 curr_element += 1
@@ -367,7 +363,10 @@ class Buchi(object):
             hasse.add_nodes_from(ele_seq[0])
             hasse.add_edges_from(linear_order)
             self.prune_subgraph(hasse)
-            w = max([len(o) for o in nx.antichains(hasse)])
+            try:
+                w = max([len(o) for o in nx.antichains(hasse)])
+            except nx.exception.NetworkXUnfeasible:
+                print(hasse.edges)
             h = nx.dag_longest_path_length(hasse)
             if w > width or (w == width and h > height):
                 graph_with_maximum_width = hasse
