@@ -86,7 +86,7 @@ def construct_milp_constraint(ts, type_num, poset, pruned_subgraph, element2edge
                      [value for key, value in t_vars.items() if key[2] == 1]))
     m.setObjective(expr, GRB.MINIMIZE)
     # m.Params.OutputFlag = 0
-    m.Params.MIPGap = 0.05
+    # m.Params.MIPGap = 0.05
     m.update()
     print('# of variables: {0}'.format(m.NumVars))
     print('# of constraints: {0}'.format(m.NumConstrs))
@@ -397,8 +397,14 @@ def get_same_robot(robot2robots, robot2eccl, x_vars, element_component_clause_li
         num_vertex = len(element_component_clause_literal_node[eccls[0]])
         num_robot = type_num[ts.nodes[element_component_clause_literal_node[eccls[0]][0]]
         ['location_type_component_element'][1]]
+        # detemine the eccl that the corresponding vertices are visited
+        vertices = None
+        for eccl in eccls:
+            vertices = element_component_clause_literal_node[eccl]
+            if sum([x_vars[(p, vertices[0], k)].x for p in ts.predecessors(vertices[0]) for k in range(num_robot)]) > 0:
+                break
         for vertex in range(num_vertex):
-            v = element_component_clause_literal_node[eccls[0]][vertex]
+            v = vertices[vertex]
             for k in range(num_robot):
                 if sum([x_vars[(p, v, k)].x for p in ts.predecessors(v)]) == 1:
                     robots.append(k)

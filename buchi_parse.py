@@ -327,7 +327,7 @@ class Buchi(object):
                     label2eccl[region_type] = [(element, component, c, l)]
         return label2eccl
 
-    def map_path_to_element_sequence(self, edge2element, paths):
+    def map_path_to_element_sequence(self, edge2element, element2edge, pruned_subgraph, paths):
         element_sequences = []
         # put all path that share the same set of elements into one group
         for path in paths:
@@ -345,7 +345,7 @@ class Buchi(object):
 
         graph_with_maximum_width = DiGraph()
         width = 0
-        height = 0
+        height = np.inf
         # for each group, find one poset
         for ele_seq in element_sequences:
             # all pairs of elements from the first element
@@ -367,12 +367,13 @@ class Buchi(object):
                 w = max([len(o) for o in nx.antichains(hasse)])
             except nx.exception.NetworkXUnfeasible:
                 print(hasse.edges)
-            h = nx.dag_longest_path_length(hasse)
-            if w > width or (w == width and h > height):
+            # h = nx.dag_longest_path_length(hasse)
+            h = len([e for e in hasse.nodes if pruned_subgraph.nodes[element2edge[e][0]]['label'] != '1'])
+            if w > width or (w == width and h < height):
                 graph_with_maximum_width = hasse
                 width = w
                 height = h
-
+        # print(height)
         return {edge for edge in graph_with_maximum_width.edges}, list(graph_with_maximum_width.nodes), \
                             graph_with_maximum_width
 

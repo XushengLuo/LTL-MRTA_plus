@@ -58,7 +58,7 @@ def construct_milp_constraint(ts, type_num, poset, pruned_subgraph, element2edge
     expr.add(LinExpr([0.3] * len([key for key in t_vars.keys() if key[2] == 1]),
                      [value for key, value in t_vars.items() if key[2] == 1]))
     m.setObjective(expr, GRB.MINIMIZE)
-    m.Params.OutputFlag = 0
+    # m.Params.OutputFlag = 0
     m.update()
     m.optimize()
     if m.status == GRB.Status.OPTIMAL:

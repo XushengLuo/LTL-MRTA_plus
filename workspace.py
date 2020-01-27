@@ -19,10 +19,12 @@ class Workspace(object):
         # self.length = int(sys.argv[1])
         # self.width = int(sys.argv[1])
         # n = int(sys.argv[2])
-        self.length = 10
-        self.width = 10
-        n = 5
-        self.type_num = {1: n, 2: n, 3: n, 4: n, 5: n}   # single-task robot
+        self.length = 10     # length
+        self.width = 10      # width
+        self.n = 3
+        self.type_num = {1: self.n, 2: self.n, 3: self.n, 4: self.n, 5: self.n}   # single-task robot
+        # self.type_num = {1: self.n, 2: self.n}   # single-task robot
+
         self.workspace = (self.length, self.width)
         self.num_of_regions = 10
         self.num_of_obstacles = 10
@@ -30,7 +32,9 @@ class Workspace(object):
         self.regions = {'l{0}'.format(i+1): j for i, j in enumerate(self.allocate(self.num_of_regions))}
         self.obstacles = {'o{0}'.format(i+1): j for i, j in enumerate(self.allocate(self.num_of_obstacles))}
         self.type_robot_location = self.initialize()
+        # region and corresponding locations
         self.label_location = {'r{0}'.format(i + 1): j for i, j in enumerate(list(self.type_robot_location.values()))}
+        # region where robots reside
         self.type_robot_label = dict(zip(self.type_robot_location.keys(), self.label_location.keys()))
         # self.regions = {'l1': (1, 0), 'l2': (6, 3), 'l3': (2, 5)}
         # self.obstacles = {'o1': (0, 5), 'o2': (0, 0), 'o3': (4, 2)}
@@ -41,7 +45,7 @@ class Workspace(object):
         self.graph_workspace = nx.Graph()
         self.build_graph()
 
-        self.p2p, self.p2p_path = self.point_to_point_path()
+        self.p2p, self.p2p_path = self.point_to_point_path()  # label2label path
 
     def initialize(self):
         type_robot_location = dict()
@@ -75,10 +79,10 @@ class Workspace(object):
         if location[0]-1 >= 0 and (location[0]-1, location[1]) not in obstacles:
             next_location.append((location, (location[0]-1, location[1])))
         # right
-        if location[0]+1 <= self.width and (location[0]+1, location[1]) not in obstacles:
+        if location[0]+1 < self.width and (location[0]+1, location[1]) not in obstacles:
             next_location.append((location, (location[0]+1, location[1])))
         # up
-        if location[1]+1 <= self.length and (location[0], location[1]+1) not in obstacles:
+        if location[1]+1 < self.length and (location[0], location[1]+1) not in obstacles:
             next_location.append((location, (location[0], location[1]+1)))
         # down
         if location[1]-1 >= 0 and (location[0], location[1]-1) not in obstacles:

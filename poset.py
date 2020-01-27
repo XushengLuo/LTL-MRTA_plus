@@ -5,6 +5,7 @@ import math
 
 
 def strict_larger(element2edge, pruned_subgraph, poset_relation):
+    #
     remove = set()
     add = set()
     for order in poset_relation:
@@ -45,6 +46,7 @@ def strict_larger(element2edge, pruned_subgraph, poset_relation):
 
 
 def element2robot2eccl(poset, element2edge, pruned_subgraph):
+    # the robots involved in the component of the element and the corresponding label
     robot2eccl = dict()
     for element in poset:
         edge_label = pruned_subgraph.edges[element2edge[element]]['label']
@@ -76,6 +78,7 @@ def element2robot2eccl(poset, element2edge, pruned_subgraph):
 
 
 def incomparable_larger(poset, hasse_diagram, pruned_subgraph, element2edge):
+    # elements that are larger or imcomparable to a certain element
     incomparable_element = dict()
     larger_element = dict()
 

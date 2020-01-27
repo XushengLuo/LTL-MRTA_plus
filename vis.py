@@ -47,17 +47,21 @@ class RobotPath:
 
     def label(self, robot_point):
         true_ap = dict()
+        # loop over each conjunction in the task formula
         for aps in self.ap:
             sat = True
             robot = []
             for ap in aps:
+                # robot of certain type that visits the specified region
                 r = [type_robot[1]+1 for type_robot, location in robot_point.items() if type_robot[0] == ap[1]
                      and (location[0]-0.5, location[1]-0.5) == self.workspace.regions[ap[0]]]
+                # whether the conjunction is satisfied
                 if len(r) < ap[2]:
                     sat = False
                     break
                 robot.append(r)
             if sat:
+                # (location, type): #robots
                 true_ap.update({(ap[0], ap[1]): robot[index] for index, ap in enumerate(aps)})
 
         if true_ap and self.elapse_time != -1:
@@ -142,12 +146,6 @@ def vis(workspace, robot_path, robot_pre_suf_time, ap):
     ap_text = [ax.text(-3.5, 9.5 - k*0.5, ap_template.format('{0}'.format("."), '{0}'.format("."), '{0}'.format(".")),
                        color='red', weight='bold') for k in range(10)]
     cls_robot_path.label(workspace.type_robot_location)
-    for ap, location_type, robot in zip(ap_text[:len(cls_robot_path.sat.keys())], cls_robot_path.sat.keys(),
-                                        cls_robot_path.sat.values()):
-        ap.set_text(ap_template.format(robot, 'of type {0}'.format(location_type[1]),
-                                       'visit {0}'.format(location_type[0][1:])))
-    for ap in ap_text[len(cls_robot_path.sat.keys()):]:
-        ap.set_text(ap_template.format('{0}'.format("."), '{0}'.format("."), '{0}'.format(".")))
 
     particles = ax.scatter([], [], c=[], s=70, cmap="hsv", vmin=0, vmax=1)
     annots = [ax.text(100, 100, r"[{0},{1}]".format(type_robot[1]+1, type_robot[0]), weight='bold', fontsize=8)
@@ -157,6 +155,7 @@ def vis(workspace, robot_path, robot_pre_suf_time, ap):
     ani = anim.FuncAnimation(fig, animate, fargs=[ax, particles, annots, cls_robot_path, time_template, time_text,
                                                   ap_template, ap_text],
                              frames=int(np.ceil(max_frame)), interval=30, blit=True)
-    ani.save('/Users/chrislaw/Box Sync/Research/LTL_MRTA_icra2020/video/phi3.mp4', fps=1/cls_robot_path.dt, dpi=400)
+    # ani.save('/Users/chrislaw/Box Sync/Research/LTL_MRTA_icra2020/video/phi.mp4', fps=1/cls_robot_path.dt, dpi=400)
+    ani.save('/Users/chrislaw/Desktop/phi.mp4', fps=1/cls_robot_path.dt, dpi=400)
 
     # plt.show()

@@ -10,6 +10,7 @@ import milp_suffix
 import pickle
 from vis import vis
 import numpy
+from post_processing import run
 
 
 factor = 1
@@ -49,7 +50,7 @@ edge2element, element2edge = buchi.get_element(pruned_subgraph)
 
 element_component2label = buchi.element2label2eccl(element2edge, pruned_subgraph)
 
-poset_relation, pos, hasse_diagram = buchi.map_path_to_element_sequence(edge2element, paths)
+poset_relation, pos, hasse_diagram = buchi.map_path_to_element_sequence(edge2element, element2edge, pruned_subgraph, paths)
 
 robot2eccl = poset.element2robot2eccl(pos, element2edge, pruned_subgraph)
 
@@ -75,7 +76,7 @@ ts = weighted_ts.construct_graph(num_nodes, node_location_type_component_element
 
 # with open('data/workspace', 'wb') as filehandle:
 #     pickle.dump(ts, filehandle)
-print(numpy.mean([ts.edges[e]['weight'] for e in ts.edges]))
+# print(numpy.mean([ts.edges[e]['weight'] for e in ts.edges]))
 
 # with open('data/workspace', 'rb') as filehandle:
 #     ts_10 = pickle.load(filehandle)
@@ -103,15 +104,16 @@ if is_nonempty_self_loop:
     for robot in robot_time_pre.keys():
         robot_pre_suf_time[robot] = [robot_time_pre[robot][-1]] * 2
 
-    # vis(workspace, robot_path_pre, robot_pre_suf_time, task.ap)
+    vis(workspace, robot_path_pre, robot_pre_suf_time, task.ap)
     for type_robot, waypoint in robot_waypoint_pre.items():
         print(type_robot, " : ", waypoint)
         print(type_robot, " : ", robot_time_pre[type_robot])
         print(type_robot, " : ", robot_path_pre[type_robot])
-        print(type_robot, " : ", list(range(round(robot_time_pre[type_robot][-1])+1)))
+        # print(type_robot, " : ", list(range(round(robot_time_pre[type_robot][-1])+1)))
 # workspace.plot_workspace()
 # workspace.path_plot(robot_path_pre)
 # plt.show()
+# run(pruned_subgraph, robot_path_pre, workspace.regions, init_state, accept_state)
 
 if not is_nonempty_self_loop:
     pruned_subgraph, paths = buchi.get_subgraph(accept_state, accept_state, False)
@@ -120,7 +122,7 @@ if not is_nonempty_self_loop:
 
     element_component2label = buchi.element2label2eccl(element2edge, pruned_subgraph)
 
-    poset_relation, pos, hasse_diagram = buchi.map_path_to_element_sequence(edge2element, paths)
+    poset_relation, pos, hasse_diagram = buchi.map_path_to_element_sequence(edge2element, element2edge, pruned_subgraph, paths)
 
     robot2eccl = poset.element2robot2eccl(pos, element2edge, pruned_subgraph)
 
@@ -178,7 +180,7 @@ if not is_nonempty_self_loop:
             del robot_path[robot]
             del robot_pre_suf_time[robot]
 
-    vis(workspace, robot_path, robot_pre_suf_time, task.ap)
+    # vis(workspace, robot_path, robot_pre_suf_time, task.ap)
 
     for type_robot, waypoint in robot_waypoint_pre.items():
         print(type_robot, " : ", waypoint)
