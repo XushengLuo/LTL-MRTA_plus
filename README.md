@@ -1,2 +1,2 @@
-# Temporal Logic Task Allocation in Multi-Robot Systems
+# Temporal Logic Task Allocation in Multi-Robot Systems (RSS)
 We consider the problem of optimally allocating tasks, expressed as a global Linear Temporal Logic (LTL) specification, to teams of mobile robots. We extract these tasks from the Nondeterministic Buchi Automaton (NBA) that models the global LTL and then allocate them to robots by formulating a Mixed Integer Linear Program (MILP) that also respects the temporal constraints between tasks captured in the LTL. We present numerical simulations that demonstrate the correctness and efficiency of the proposed method.

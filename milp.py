@@ -19,7 +19,7 @@ def construct_milp_constraint(ts, type_num, poset, pruned_subgraph, element2edge
     network_schedule_constraints(m, ts, x_vars, t_vars, init_type_robot_node, incomparable_element, larger_element,
                                  type_num, M, epsilon, factor)
 
-    # edge time constraints -- eq (16)
+    # edge time constraints -- eq (12)
     for element in poset:
         edge_label = pruned_subgraph.edges[element2edge[element]]['label']
         if edge_label != '1':
@@ -28,7 +28,7 @@ def construct_milp_constraint(ts, type_num, poset, pruned_subgraph, element2edge
                 type_num[ts.nodes[element_component_clause_literal_node[(element, 1, c, 0)][0]]
                 ['location_type_component_element'][1]])) == t_edge_vars[element])
 
-    # binary relation between edge time -- eq (19)
+    # binary relation between edge time -- eq (15)
     for element in poset:
         for another_element in poset:
             if element != another_element and pruned_subgraph.edges[element2edge[element]]['label'] != '1' and  \
@@ -39,7 +39,7 @@ def construct_milp_constraint(ts, type_num, poset, pruned_subgraph, element2edge
                 m.addConstr(t_edge_vars[element] - t_edge_vars[another_element] <=
                             M * b_element_vars[(element, another_element)] - epsilon)
 
-    # using same robot
+    # using same group of robot (20)
     for robot, eccls in robot2eccl.items():
         clause = [list(group) for key, group in itertools.groupby(eccls, operator.itemgetter(0, 1))]
         num_vertex = len(element_component_clause_literal_node[eccls[0]])
@@ -85,7 +85,7 @@ def construct_milp_constraint(ts, type_num, poset, pruned_subgraph, element2edge
     expr.add(LinExpr([0.3]*len([key for key in t_vars.keys() if key[2] == 1]),
                      [value for key, value in t_vars.items() if key[2] == 1]))
     m.setObjective(expr, GRB.MINIMIZE)
-    # m.Params.OutputFlag = 0
+    m.Params.OutputFlag = 0
     # m.Params.MIPGap = 0.05
     m.update()
     print('# of variables: {0}'.format(m.NumVars))
@@ -170,19 +170,20 @@ def create_variables(m, ts, poset, pruned_subgraph, element2edge, type_num, fact
 
 def initial_constraints(m, x_vars, t_vars, ts, init_type_robot_node, type_num):
     # create initial constraints
-    # nodes for initial locations -- eq (8)
+    # nodes for initial locations -- eq (5)
     for type_robot, node in init_type_robot_node.items():
         m.addConstr(1 >= quicksum(x_vars[(node, s, type_robot[1])] for s in ts.successors(node)))
         m.addConstr(0 == quicksum(x_vars[(node, s, k)] for s in ts.successors(node) for k in
                                   range(type_num[ts.nodes[s]['location_type_component_element'][1]])
                                   if k != type_robot[1]))
-        # initial time -- eq (10)
+        # initial time -- eq (7)
         for k in range(type_num[type_robot[0]]):
             m.addConstr(t_vars[(node, k, 1)] == 0)
     m.update()
 
 
 def one_clause_true(m, c_vars, element, component, label):
+    # -- eq (9)
     m.addConstr(quicksum(c_vars[(element, component, c)] for c in range(len(label))) == 1)
 
 
@@ -200,22 +201,22 @@ def network_schedule_constraints(m, ts, x_vars, t_vars, init_type_robot_node, in
     # focus on nodes
     for i in ts.nodes():
         if i not in init_type_robot_node.values() and list(ts.predecessors(i)):  # the predecessor of i
-            # each (replica) location represented by node is visited by at most one robot of type k -- eq (6)
+            # each (replica) location represented by node is visited by at most one robot of type k -- eq (3)
             m.addConstr(quicksum(x_vars[(p, i, k)] for p in ts.predecessors(i)
                                  for k in range(type_num[ts.nodes[i]['location_type_component_element'][1]])) <= 1)
 
             for k in range(type_num[ts.nodes[i]['location_type_component_element'][1]]):
                 # routing network that the visitation of a robot to a location i
-                # is the precondition for its departure from that location -- eq (7)
+                # is the precondition for its departure from that location -- eq (4)
                 m.addConstr(quicksum(x_vars[(p, i, k)] for p in ts.predecessors(i)) >=
                             quicksum(x_vars[(i, s, k)] for s in ts.successors(i)))
-                # t_ik = 0 if location i is not visited by the robot k -- eq (9)
+                # t_ik = 0 if location i is not visited by the robot k -- eq (6)
                 m.addConstr(t_vars[(i, k, 1)] <= M * quicksum(x_vars[(p, i, k)] for p in ts.predecessors(i)))
                 if ts.nodes[i]['location_type_component_element'][2] == 0:
                     m.addConstr(t_vars[(i, k, 0)] <= M * quicksum(x_vars[(p, i, k)] for p in ts.predecessors(i)))
 
                 # The time of robot k visiting p should be larger than that of the same robot
-                # visiting i if there is a plan from p to i -- eq (11)
+                # visiting i if there is a plan from p to i -- eq (8)
                 i_element = ts.nodes[i]['location_type_component_element'][3]
                 for p in ts.predecessors(i):
                     p_element = ts.nodes[p]['location_type_component_element'][3]
@@ -246,7 +247,7 @@ def network_schedule_constraints(m, ts, x_vars, t_vars, init_type_robot_node, in
 def edge_constraints(m, ts, x_vars, t_vars, c_vars, t_edge_vars, element, self_loop_label, edge_label,
                      strict_poset_relation, pruned_subgraph, element2edge,
                      element_component_clause_literal_node, type_num, M, epsilon):
-    # one and only one clause is true -- eq (12)
+    # one and only one clause is true -- eq (9)
     one_clause_true(m, c_vars, element, 1, edge_label)
     for c in range(len(edge_label)):
         # the nodes corresponding to each clause
@@ -254,10 +255,10 @@ def edge_constraints(m, ts, x_vars, t_vars, c_vars, t_edge_vars, element, self_l
         for l in range(len(edge_label[c])):
             clause_nodes.append(element_component_clause_literal_node[(element, 1, c, l)])
 
-        # encode the relation between clause and its literals -- eq (13)
+        # encode the relation between clause and its literals -- eq (10)
         literal_clause(m, x_vars, c_vars, element, 1, edge_label, ts, type_num, clause_nodes, c)
 
-        # encode the synchronization constraints in terms of timing -- eq (15)
+        # encode the synchronization constraints in terms of timing -- eq (11)
         for l in clause_nodes:
             for i in l:
                 m.addConstr(quicksum(t_vars[(clause_nodes[0][0], k, 1)]
@@ -266,7 +267,7 @@ def edge_constraints(m, ts, x_vars, t_vars, c_vars, t_edge_vars, element, self_l
                             quicksum(t_vars[(i, k, 1)] for k in
                                      range(type_num[ts.nodes[i]['location_type_component_element'][1]])))
 
-        # timing constraints between a node and its outgoing edge -- eq (18)
+        # timing constraints between a node and its outgoing edge -- eq (14)
         if self_loop_label and self_loop_label != '1':
             for c_self_loop in range(len(self_loop_label)):
                 for l_self_loop in range(len(self_loop_label[c_self_loop])):
@@ -285,7 +286,7 @@ def edge_constraints(m, ts, x_vars, t_vars, c_vars, t_edge_vars, element, self_l
                         #             + M * (c_vars[(element, 1, c)] - 1) <=
                         m.addConstr(t_edge_vars[element] <= quicksum(t_vars[(i, k, 1)]
                                                                      for k in range(type_num[ts.nodes[i]['location_type_component_element'][1]]))
-                                    + M * (1 - c_vars[(element, 0, c_self_loop)]))
+                                  + 1 + M * (1 - c_vars[(element, 0, c_self_loop)]))
 
         # precedence timing constraints, between edge and previous edge -- eq (17)
         for order in strict_poset_relation:
@@ -307,7 +308,7 @@ def edge_constraints(m, ts, x_vars, t_vars, c_vars, t_edge_vars, element, self_l
 def self_loop_constraints(m, ts, x_vars, t_vars, c_vars, t_edge_vars, b_element_vars, element, self_loop_label, incomparable_element,
                           strict_poset_relation, pruned_subgraph, element2edge, element_component_clause_literal_node,
                           type_num, M, epsilon):
-    # one and only one clause is true, -- eq (12)
+    # one and only one clause is true, -- eq (9)
     one_clause_true(m, c_vars, element, 0, self_loop_label)
 
     for c in range(len(self_loop_label)):
@@ -316,22 +317,29 @@ def self_loop_constraints(m, ts, x_vars, t_vars, c_vars, t_edge_vars, b_element_
         for l in range(len(self_loop_label[c])):
             clause_nodes.append(element_component_clause_literal_node[(element, 0, c, l)])
 
-        # encode the relation between clause and its literals -- eq (13)
+        # encode the relation between clause and its literals -- eq (10)
         literal_clause(m, x_vars, c_vars, element, 0, self_loop_label, ts, type_num, clause_nodes, c)
 
-        # timing constraints between a node and its incoming edge -- eq (19-20)
-        strict_incmp = [order[0] for order in strict_poset_relation if order[1] == element]
-        strict_incmp += [e for e in incomparable_element[element]
-                         if pruned_subgraph.edges[element2edge[e]]['label'] != '1']
+        # timing constraints between a node and its incoming edge -- eq (16-17)
+        strict = [order[0] for order in strict_poset_relation if order[1] == element]
+        strict_incmp = strict + [e for e in incomparable_element[element]
+                                 if pruned_subgraph.edges[element2edge[e]]['label'] != '1']
         for l in clause_nodes:
             for j in l:
                 for e in strict_incmp:
                     m.addConstr(quicksum(t_vars[(j, k, 0)]for k in range(type_num[ts.nodes[j]
                     ['location_type_component_element'][1]])) <=
-                                t_edge_vars[e] + M * (len(strict_incmp)-1 -
-                                                      quicksum(b_element_vars[o] for o in strict_incmp if o != e)))
+                                t_edge_vars[e] + 1 + M * (len(strict_incmp)-1 -
+                                                      quicksum(b_element_vars[(e, o)] for o in strict_incmp if o != e)))
 
-    #  for order in strict_poset_relation:
+        for l in clause_nodes:
+            for j in l:
+                for e in strict:
+                    m.addConstr(quicksum(t_vars[(j, k, 1)] for k in range(type_num[ts.nodes[j]
+                    ['location_type_component_element'][1]])) >= t_edge_vars[e] + 1 + M *
+                                (quicksum(b_element_vars[(e, o)] for o in strict if o != e) - (len(strict_incmp) - 1)))
+
+        #  for order in strict_poset_relation:
         #     if order[1] == element:
         #         larger_edge_label = pruned_subgraph.edges[element2edge[order[0]]]['label']
         #         for c_edge in range(len(larger_edge_label)):
@@ -410,3 +418,11 @@ def get_same_robot(robot2robots, robot2eccl, x_vars, element_component_clause_li
                     robots.append(k)
                     break
         robot2robots[robot] = robots
+
+
+def cost(path):
+    c = 0
+    for robot, p in path.items():
+        for t in range(len(p)-1):
+            c = c + abs(p[t][0]-p[t+1][0]) + abs(p[t][1]-p[t+1][1])
+    return c*0.5

@@ -238,7 +238,7 @@ def edge_constraints(m, ts, x_vars, t_vars, c_vars, t_edge_vars, element, self_l
                         m.addConstr(t_edge_vars[element] <= quicksum(t_vars[(i, k, 1)]
                                                                      for k in range(
                             type_num[ts.nodes[i]['location_type_component_element'][1]]))
-                                    + M * (1 - c_vars[(element, 0, c_self_loop)]))
+                                    + 1 + M * (1 - c_vars[(element, 0, c_self_loop)]))
 
                         # m.addConstr(quicksum(t_vars[(i, k, 0)]
                         #                      for k in
@@ -303,32 +303,40 @@ def self_loop_constraints(m, ts, x_vars, t_vars, c_vars, t_edge_vars, b_element_
         # timing constraints between a node and its incoming edge
 
         # timing constraints between a node and its incoming edge -- eq (19-20)
-        strict_incmp = [order[0] for order in strict_poset_relation if order[1] == element]
-        strict_incmp += [e for e in incomparable_element[element]
-                         if pruned_subgraph.edges[element2edge[e]]['label'] != '1']
+        strict = [order[0] for order in strict_poset_relation if order[1] == element]
+        strict_incmp = strict + [e for e in incomparable_element[element]
+                                 if pruned_subgraph.edges[element2edge[e]]['label'] != '1']
         for l in clause_nodes:
             for j in l:
                 for e in strict_incmp:
                     m.addConstr(quicksum(t_vars[(j, k, 0)] for k in range(type_num[ts.nodes[j]
                     ['location_type_component_element'][1]])) <=
-                                t_edge_vars[e] + M * (len(strict_incmp) - 1 -
-                                                      quicksum(b_element_vars[o] for o in strict_incmp if o != e)))
+                                t_edge_vars[e] + 1 + M * (len(strict_incmp) - 1 -
+                                                      quicksum(b_element_vars[(e, o)] for o in strict_incmp if o != e)))
 
-        for order in strict_poset_relation:
-            if order[1] == element:
-                larger_edge_label = pruned_subgraph.edges[element2edge[order[0]]]['label']
-                for c_edge in range(len(larger_edge_label)):
-                    i = element_component_clause_literal_node[(order[0], 1, c_edge, 0)][0]
-                    for l in clause_nodes:
-                        for j in l:
-                            m.addConstr(quicksum(t_vars[(j, k, 0)]
-                                                 for k in
-                                                 range(type_num[ts.nodes[j]['location_type_component_element'][1]]))
-                                        + M * (c_vars[(element, 0, c)] - 1) <=
-                                        quicksum(t_vars[(i, k, 1)]
-                                                 for k in
-                                                 range(type_num[ts.nodes[i]['location_type_component_element'][1]]))
-                                        + M * (1 - c_vars[(order[0], 1, c_edge)]))
+        for l in clause_nodes:
+            for j in l:
+                for e in strict:
+                    m.addConstr(quicksum(t_vars[(j, k, 1)] for k in range(type_num[ts.nodes[j]
+                    ['location_type_component_element'][1]])) >= t_edge_vars[e] + 1 + M *
+                                (quicksum(b_element_vars[(e, o)] for o in strict if o != e) - (len(strict_incmp) - 1)))
+
+
+                    # for order in strict_poset_relation:
+        #     if order[1] == element:
+        #         larger_edge_label = pruned_subgraph.edges[element2edge[order[0]]]['label']
+        #         for c_edge in range(len(larger_edge_label)):
+        #             i = element_component_clause_literal_node[(order[0], 1, c_edge, 0)][0]
+        #             for l in clause_nodes:
+        #                 for j in l:
+        #                     m.addConstr(quicksum(t_vars[(j, k, 0)]
+        #                                          for k in
+        #                                          range(type_num[ts.nodes[j]['location_type_component_element'][1]]))
+        #                                 + M * (c_vars[(element, 0, c)] - 1) <=
+        #                                 quicksum(t_vars[(i, k, 1)]
+        #                                          for k in
+        #                                          range(type_num[ts.nodes[i]['location_type_component_element'][1]]))
+        #                                 + M * (1 - c_vars[(order[0], 1, c_edge)]))
     m.update()
 
 

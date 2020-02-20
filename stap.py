@@ -11,31 +11,37 @@ import pickle
 from vis import vis
 import numpy
 from post_processing import run
-
+import networkx as nx
 
 factor = 1
 
-start = datetime.now()
-
-workspace = Workspace()
+try:
+    workspace = Workspace()
+except nx.exception.NetworkXNoPath:
+    workspace = Workspace()
 
 # plot_workspace(workspace)
 # plt.show()
 
-# with open('data/workspace', 'wb') as filehandle:
-#     pickle.dump(workspace.p2p, filehandle)
+with open('data/workspace', 'wb') as filehandle:
+    pickle.dump(workspace, filehandle)
 
 # with open('data/workspace', 'rb') as filehandle:
 #     workspace.p2p = pickle.load(filehandle)
 # workspace.plot_workspace()
 # plt.show()
 
+start = datetime.now()
+
 task = Task()
 
 buchi = Buchi(task, workspace)
 
+
 buchi.construct_buchi_graph()
+print((datetime.now()-start).total_seconds())
 # print('partial time: {0}'.format((datetime.now() - start).total_seconds()))
+print(buchi.buchi_graph.number_of_nodes(), buchi.buchi_graph.number_of_edges())
 
 
 init_state, accept_state, is_nonempty_self_loop = buchi.get_init_accept()
@@ -44,6 +50,7 @@ init_state, accept_state, is_nonempty_self_loop = buchi.get_init_accept()
 
 pruned_subgraph, paths = buchi.get_subgraph(init_state, accept_state, is_nonempty_self_loop)
 
+print(pruned_subgraph.number_of_nodes(), pruned_subgraph.number_of_edges())
 # print('partial time to pruned_graph: {0}'.format((datetime.now() - start).total_seconds()))
 
 edge2element, element2edge = buchi.get_element(pruned_subgraph)
@@ -93,23 +100,25 @@ robot_path_pre = milp.get_path(robot_waypoint_pre, robot_time_pre, workspace)
 
 if is_nonempty_self_loop:
     end = datetime.now()
-    print('total time: {0}'.format((end - start).total_seconds()))
+    # print('total time: {0}'.format((end - start).total_seconds()))
     for robot, time in list(robot_time_pre.items()):
         if time[-1] == 0:
             del robot_path_pre[robot]
             del robot_time_pre[robot]
             del robot_waypoint_pre[robot]
-    #
+
     robot_pre_suf_time = dict()
     for robot in robot_time_pre.keys():
         robot_pre_suf_time[robot] = [robot_time_pre[robot][-1]] * 2
 
-    vis(workspace, robot_path_pre, robot_pre_suf_time, task.ap)
-    for type_robot, waypoint in robot_waypoint_pre.items():
-        print(type_robot, " : ", waypoint)
-        print(type_robot, " : ", robot_time_pre[type_robot])
-        print(type_robot, " : ", robot_path_pre[type_robot])
-        # print(type_robot, " : ", list(range(round(robot_time_pre[type_robot][-1])+1)))
+    # vis(workspace, robot_path_pre, robot_pre_suf_time, task.ap)
+    # for type_robot, waypoint in robot_waypoint_pre.items():
+    #     print(type_robot, " : ", waypoint)
+    #     print(type_robot, " : ", robot_time_pre[type_robot])
+    #     print(type_robot, " : ", robot_path_pre[type_robot])
+    #     # print(type_robot, " : ", list(range(round(robot_time_pre[type_robot][-1])+1)))
+    c = milp.cost(robot_path_pre)
+    print((end - start).total_seconds(), c)
 # workspace.plot_workspace()
 # workspace.path_plot(robot_path_pre)
 # plt.show()
@@ -180,7 +189,7 @@ if not is_nonempty_self_loop:
             del robot_path[robot]
             del robot_pre_suf_time[robot]
 
-    # vis(workspace, robot_path, robot_pre_suf_time, task.ap)
+    vis(workspace, robot_path, robot_pre_suf_time, task.ap)
 
     for type_robot, waypoint in robot_waypoint_pre.items():
         print(type_robot, " : ", waypoint)

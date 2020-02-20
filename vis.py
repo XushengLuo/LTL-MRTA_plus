@@ -17,6 +17,7 @@ class RobotPath:
         self.workspace = workspace
         self.ap = ap
         self.sat = dict()
+        self.point = dict()
 
     def iterate(self):
         robot_point = {}
@@ -44,6 +45,9 @@ class RobotPath:
             robot_point[type_robot] = x[-1]
         self.x = np.array(x)
         self.label(robot_point)
+        # find the robot that are in loc
+        for loc in set(x):
+            self.point[loc] = [index for index, point in enumerate(x) if point == loc]
 
     def label(self, robot_point):
         true_ap = dict()
@@ -109,9 +113,12 @@ def plot_workspace_helper(ax, obj, obj_label):
 def animate(i, ax, particles, annots, cls_robot_path, time_template, time_text, ap_template, ap_text):
     cls_robot_path.iterate()
     time_text.set_text(time_template % cls_robot_path.elapse_time)
+
     # ap_text.set_text(ap_template % cls_robot_path.)
     for t, new_x_i, new_y_i in zip(annots, cls_robot_path.x[:, 0], cls_robot_path.x[:, 1]):
-        t.set_position((new_x_i, new_y_i+0.1))
+        robot_index = annots.index(t)
+        h = cls_robot_path.point[tuple(cls_robot_path.x[robot_index, :])].index(robot_index) + 1
+        t.set_position((new_x_i, new_y_i+0.33*h))
 
     particles.set_offsets(cls_robot_path.x)
     particles.set_array(cls_robot_path.color)
@@ -143,7 +150,7 @@ def vis(workspace, robot_path, robot_pre_suf_time, ap):
     time_text = ax.text(0.01, 1.05, time_template % cls_robot_path.elapse_time, transform=ax.transAxes, weight='bold')
 
     ap_template = '{0} {1} {2}'
-    ap_text = [ax.text(-3.5, 9.5 - k*0.5, ap_template.format('{0}'.format("."), '{0}'.format("."), '{0}'.format(".")),
+    ap_text = [ax.text(-3.5, 9.5 - k*0.5, ap_template.format('{0}'.format(""), '{0}'.format(""), '{0}'.format("")),
                        color='red', weight='bold') for k in range(10)]
     cls_robot_path.label(workspace.type_robot_location)
 

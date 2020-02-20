@@ -21,7 +21,7 @@ class Workspace(object):
         # n = int(sys.argv[2])
         self.length = 10     # length
         self.width = 10      # width
-        self.n = 3
+        self.n = 5  # nt(sys.argv[1])
         self.type_num = {1: self.n, 2: self.n, 3: self.n, 4: self.n, 5: self.n}   # single-task robot
         # self.type_num = {1: self.n, 2: self.n}   # single-task robot
 

@@ -64,6 +64,8 @@ class Buchi(object):
                         if state == next_state:
                             self.buchi_graph.nodes[state]['label'] = edge_label
                             self.buchi_graph.nodes[state]['formula'] = to_dnf(symbol)
+                            # if 'accept' in state:
+                            #     print(edge_label)
                             continue
                         # add edge
                         self.buchi_graph.add_edge(state, next_state, label=edge_label, formula=to_dnf(symbol))
@@ -241,7 +243,6 @@ class Buchi(object):
             subgraph.add_edge(tail, tail, label=subgraph.nodes[tail]['label'], formula=subgraph.nodes[tail]['formula'])
             for path in paths:
                 path.append(tail)
-
         return subgraph, paths
 
     def get_element(self, pruned_subgraph):
@@ -345,7 +346,7 @@ class Buchi(object):
 
         graph_with_maximum_width = DiGraph()
         width = 0
-        height = np.inf
+        height = 0
         # for each group, find one poset
         for ele_seq in element_sequences:
             # all pairs of elements from the first element
@@ -369,7 +370,7 @@ class Buchi(object):
                 print(hasse.edges)
             # h = nx.dag_longest_path_length(hasse)
             h = len([e for e in hasse.nodes if pruned_subgraph.nodes[element2edge[e][0]]['label'] != '1'])
-            if w > width or (w == width and h < height):
+            if w > width or (w == width and h > height):
                 graph_with_maximum_width = hasse
                 width = w
                 height = h

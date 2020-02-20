@@ -3,6 +3,7 @@ from workspace import Workspace
 import matplotlib.pyplot as plt
 from z3 import *
 from termcolor import colored
+import pickle
 
 
 def AND(*b):
@@ -66,6 +67,18 @@ def encode_workspace(ws):
     return code2cell, cell2code, adjacent_region, region2code, code2region, robot2code
 
 
+def cost(path, l):
+    c = 0
+    for robot, p in path.items():
+        for t in range(l-1):
+            c = c + abs(p[t][0]-p[t+1][0]) + abs(p[t][1]-p[t+1][1])
+        for t in range(l-1, len(p)-1):
+            c = c + abs(p[t][0]-p[t+1][0]) + abs(p[t][1]-p[t+1][1])
+        c = c + abs(p[len(p)-1][0]-p[l-1][0]) + abs(p[len(p)-1][1]-p[l-1][1])
+
+    return c*0.5
+
+
 def constraint(s, adj_region, robot2code, n_Robot, n_Region, ws):
 
     start_z3_less = datetime.datetime.now()
@@ -85,7 +98,7 @@ def constraint(s, adj_region, robot2code, n_Robot, n_Region, ws):
     loop_region_c = [
         IMPLIES(loop[k], Robot_Region_Horizon[(k - 1) * n_Region * n_Robot + robotCounter * n_Region + region]
                 == Robot_Region_Horizon[(n_Horizon - 1) * n_Region * n_Robot + robotCounter * n_Region + region])
-        for k in range(1, n_Horizon) for robotCounter in range(n_Robot) for region in range(n_Region)]
+        for k in range(1, n_Horizon-1) for robotCounter in range(n_Robot) for region in range(n_Region)]
 
     s.add(loop_c + loop_region_c)
 
@@ -135,100 +148,108 @@ def constraint(s, adj_region, robot2code, n_Robot, n_Region, ws):
     # s.add(formula_1 + eventually)
 
     # case []<> (l1_1_1 && l1_2_1)
-    n_formula = 1
+    n_formula = 5
     formula = BoolVector('f', n_formula * n_Horizon)
     formulaCounter = 0
-    formula = [formula[formulaCounter * n_Horizon + horizonCounter]
+    formula_1 = [formula[formulaCounter * n_Horizon + horizonCounter]
                  == (And([sum([BoolVar2Int(Robot_Region_Horizon[n_Robot * n_Region *
                     horizonCounter + robot * n_Region + region2code["l1"]]) for robot in range(0*ws.n, 1*ws.n)]) >= ws.n//3,
                           sum([BoolVar2Int(Robot_Region_Horizon[n_Robot * n_Region *
                     horizonCounter + robot * n_Region + region2code["l1"]]) for robot in range(1*ws.n, 2*ws.n)]) >= ws.n//3]))
                  for horizonCounter in range(n_Horizon)]
-    always_eventually = [
+    always_eventually_1 = [
         Or([And(loop[i], Or([formula[formulaCounter * n_Horizon + horizonCounter]
                              for horizonCounter in range(i, n_Horizon)])) for i in
             range(1, n_Horizon)])]
-    s.add(formula + always_eventually)
+    s.add(formula_1 + always_eventually_1)
 
     # case []<> (l2_1_1 && l2_2_1)
     formulaCounter += 1
-    formula = [formula[formulaCounter * n_Horizon + horizonCounter]
+    formula_2 = [formula[formulaCounter * n_Horizon + horizonCounter]
                  == (And([sum([BoolVar2Int(Robot_Region_Horizon[n_Robot * n_Region *
                     horizonCounter + robot * n_Region + region2code["l2"]]) for robot in range(1*ws.n, 2*ws.n)]) >= ws.n//3,
                           sum([BoolVar2Int(Robot_Region_Horizon[n_Robot * n_Region *
                     horizonCounter + robot * n_Region + region2code["l2"]]) for robot in range(2*ws.n, 3*ws.n)]) >= ws.n//3]))
                  for horizonCounter in range(n_Horizon)]
-    always_eventually = [
+    always_eventually_2 = [
         Or([And(loop[i], Or([formula[formulaCounter * n_Horizon + horizonCounter]
                              for horizonCounter in range(i, n_Horizon)])) for i in
             range(1, n_Horizon)])]
-    s.add(formula + always_eventually)
+    s.add(formula_2 + always_eventually_2)
 
-    # case []<> (l3_1_1 && l3_2_1)
+    # case []<> (l3_3_1 && l3_4_1)
     formulaCounter += 1
-    formula = [formula[formulaCounter * n_Horizon + horizonCounter]
+    formula_3 = [formula[formulaCounter * n_Horizon + horizonCounter]
                  == (And([sum([BoolVar2Int(Robot_Region_Horizon[n_Robot * n_Region *
                     horizonCounter + robot * n_Region + region2code["l3"]]) for robot in range(2*ws.n, 3*ws.n)]) >= ws.n//3,
                           sum([BoolVar2Int(Robot_Region_Horizon[n_Robot * n_Region *
                     horizonCounter + robot * n_Region + region2code["l3"]]) for robot in range(3*ws.n, 4*ws.n)]) >= ws.n//3]))
                  for horizonCounter in range(n_Horizon)]
-    always_eventually = [
+    always_eventually_3 = [
         Or([And(loop[i], Or([formula[formulaCounter * n_Horizon + horizonCounter]
                              for horizonCounter in range(i, n_Horizon)])) for i in
             range(1, n_Horizon)])]
-    s.add(formula + always_eventually)
+    s.add(formula_3 + always_eventually_3)
 
-    # case []<> (l4_1_1 && l4_2_1)
+    # case []<> (l4_4_1 && l4_5_1)
     formulaCounter += 1
-    formula = [formula[formulaCounter * n_Horizon + horizonCounter]
+    formula_4 = [formula[formulaCounter * n_Horizon + horizonCounter]
                  == (And([sum([BoolVar2Int(Robot_Region_Horizon[n_Robot * n_Region *
                     horizonCounter + robot * n_Region + region2code["l4"]]) for robot in range(3*ws.n, 4*ws.n)]) >= ws.n//3,
                           sum([BoolVar2Int(Robot_Region_Horizon[n_Robot * n_Region *
                     horizonCounter + robot * n_Region + region2code["l4"]]) for robot in range(4*ws.n, 5*ws.n)]) >= ws.n//3]))
                  for horizonCounter in range(n_Horizon)]
-    always_eventually = [
+    always_eventually_4 = [
         Or([And(loop[i], Or([formula[formulaCounter * n_Horizon + horizonCounter]
                              for horizonCounter in range(i, n_Horizon)])) for i in
             range(1, n_Horizon)])]
-    s.add(formula + always_eventually)
+    s.add(formula_4 + always_eventually_4)
 
     if s.check() == sat:
         z3_time_less = (datetime.datetime.now() - start_z3_less).total_seconds()
         z3_time = (datetime.datetime.now() - start_z3).total_seconds()
-        print(z3_time, z3_time_less)
-        print("Success when # horizon is {0}".format(n_Horizon))
+        # print(z3_time, z3_time_less)
+        # print("Success when # horizon is {0}".format(n_Horizon))
         m = s.model()
 
+        l = 0
+        path = dict()
         for robotCounter in range(n_Robot):
-            print("Robot ", (robotCounter//workspace.n+1, robotCounter % workspace.n), ': ', end=""),
+            path[(robotCounter//workspace.n+1, robotCounter % workspace.n)] = []
+            # print("Robot ", (robotCounter//workspace.n+1, robotCounter % workspace.n), ': ', end=""),
             for horizonCounter in range(1, n_Horizon):
                 if m.evaluate(loop[horizonCounter]):
-                    print('<{0}> '.format(horizonCounter + 1), end="")
+                    # print('<{0}> '.format(horizonCounter + 1), end="")
+                    l = horizonCounter
             for horizonCounter in range(n_Horizon):
                 for counter in range(n_Region):
                     indexShift = horizonCounter * n_Robot * n_Region + robotCounter * n_Region
                     if m.evaluate(Robot_Region_Horizon[indexShift + counter]):
-                        try:
-                            try:
-                                print("[[", colored(code2region[counter], 'yellow'), "]]", ' --> ', end="")
-                            except KeyError:
-                                print("[[", code2cell[counter], "]]", ' --> ', end="")
-                        except KeyError:
-                            print(counter, '--> ', end=""),
+                        path[(robotCounter // workspace.n + 1, robotCounter % workspace.n)].append(code2cell[counter])
+                        # try:
+                        #     try:
+                        #         print("[[", colored(code2region[counter], 'yellow'), "]]", ' --> ', end="")
+                        #     except KeyError:
+                        #         print("[[", code2cell[counter], "]]", ' --> ', end="")
+                        # except KeyError:
+                        #     print(counter, '--> ', end=""),
                         break
-            print()
+            # print()
+        c = cost(path, l)
+        print(int(sys.argv[2]), n_Horizon, z3_time, z3_time_less, c)
 
         return True
     return False
 
 
-workspace = Workspace()
-
+# workspace = Workspace()
+with open('data/workspace', 'rb') as filehandle:
+    workspace = pickle.load(filehandle)
 code2cell, cell2code, adjacent_region, region2code, code2region, robot2code = encode_workspace(workspace)
 
-# inilize SAT solver
 start_z3 = datetime.datetime.now()
-for n_Horizon in range(5, 20):
+# inilize SAT solver
+for n_Horizon in range(int(sys.argv[2]), 20):
     # Z3 solver
     s = Solver()
     s.reset()
@@ -236,9 +257,9 @@ for n_Horizon in range(5, 20):
                   len(adjacent_region), workspace):
         break
 
-# print(code2cell)
-# print(cell2code)
-# print(adjacent_region)
+# # print(code2cell)
+# # print(cell2code)
+# # print(adjacent_region)
 
-workspace.plot_workspace()
-plt.show()
+# workspace.plot_workspace()
+# plt.show()
